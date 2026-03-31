@@ -1,0 +1,32 @@
+{
+  "name": "@davoxi/hubspot-integration",
+  "version": "1.0.0",
+  "description": "HubSpot marketplace integration for the Davoxi AI voice agent platform",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch & node --watch dist/server.js",
+    "start": "node dist/server.js",
+    "test": "jest --testTimeout 10000",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.14.0",
+    "@types/node-fetch": "^2.6.11",
+    "jest": "^29.7.0",
+    "rimraf": "^5.0.7",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}
