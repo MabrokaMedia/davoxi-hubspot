@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getTokens, setDavoxiApiKey } from "../services/token-store";
-import { davoxiRequest } from "../services/davoxi-client";
+import { DavoxiClient } from "@davoxi/client";
+import { config } from "../config";
 
 const router = Router();
 
@@ -22,7 +23,8 @@ router.post("/api-key", async (req, res) => {
   }
 
   try {
-    await davoxiRequest(apiKey, "GET", "/users/me");
+    const client = new DavoxiClient({ apiKey, apiUrl: config.davoxi.apiUrl });
+    await client.getProfile();
   } catch {
     res.status(401).json({ error: "Invalid Davoxi API key" });
     return;

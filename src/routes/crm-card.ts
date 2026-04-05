@@ -1,22 +1,10 @@
 import { Router } from "express";
 import { getTokens } from "../services/token-store";
-import { davoxiRequest } from "../services/davoxi-client";
+import { DavoxiClient } from "@davoxi/client";
+import type { UsageSummary, Business } from "@davoxi/client";
+import { config } from "../config";
 
 const router = Router();
-
-interface DavoxiUsageSummary {
-  total_calls: number;
-  total_minutes: number;
-  total_cost: number;
-  period_start: string;
-  period_end: string;
-}
-
-interface DavoxiBusiness {
-  business_id: string;
-  name: string;
-  phone_numbers: string[];
-}
 
 /**
  * GET /crm-card/contact — CRM card data for a HubSpot contact record.
@@ -48,9 +36,10 @@ router.get("/contact", async (req, res) => {
   }
 
   try {
+    const client = new DavoxiClient({ apiKey: record.davoxiApiKey, apiUrl: config.davoxi.apiUrl });
     const [usage, businesses] = await Promise.all([
-      davoxiRequest<DavoxiUsageSummary>(record.davoxiApiKey, "GET", "/usage/summary"),
-      davoxiRequest<DavoxiBusiness[]>(record.davoxiApiKey, "GET", "/businesses"),
+      client.getUsageSummary(),
+      client.listBusinesses(),
     ]);
 
     res.json({

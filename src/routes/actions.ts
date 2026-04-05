@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getTokens } from "../services/token-store";
-import { davoxiRequest } from "../services/davoxi-client";
+import { DavoxiClient } from "@davoxi/client";
+import { config } from "../config";
 
 const router = Router();
 
@@ -21,11 +22,8 @@ router.get("/businesses", async (req, res) => {
   }
 
   try {
-    const businesses = await davoxiRequest<Array<{ business_id: string; name: string }>>(
-      record.davoxiApiKey,
-      "GET",
-      "/businesses",
-    );
+    const client = new DavoxiClient({ apiKey: record.davoxiApiKey, apiUrl: config.davoxi.apiUrl });
+    const businesses = await client.listBusinesses();
     res.json(businesses);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -52,11 +50,8 @@ router.get("/agents", async (req, res) => {
   }
 
   try {
-    const agents = await davoxiRequest<Array<{ agent_id: string; description: string }>>(
-      record.davoxiApiKey,
-      "GET",
-      `/businesses/${encodeURIComponent(businessId)}/agents`,
-    );
+    const client = new DavoxiClient({ apiKey: record.davoxiApiKey, apiUrl: config.davoxi.apiUrl });
+    const agents = await client.listAgents(businessId);
     res.json(agents);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -81,7 +76,8 @@ router.get("/usage", async (req, res) => {
   }
 
   try {
-    const usage = await davoxiRequest(record.davoxiApiKey, "GET", "/usage/summary");
+    const client = new DavoxiClient({ apiKey: record.davoxiApiKey, apiUrl: config.davoxi.apiUrl });
+    const usage = await client.getUsageSummary();
     res.json(usage);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
