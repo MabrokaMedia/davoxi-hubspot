@@ -11,7 +11,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@davoxi/client": "file:../packages/client",
+    "@davoxi/client": "github:MabrokaMedia/davoxi-client",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "helmet": "^8.0.0",
