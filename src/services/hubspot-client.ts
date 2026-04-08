@@ -19,8 +19,8 @@ export async function exchangeCodeForTokens(code: string) {
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HubSpot token exchange failed (${res.status}): ${text}`);
+    await res.text(); // consume body
+    throw new Error(`HubSpot token exchange failed (${res.status})`);
   }
 
   return res.json() as Promise<{
@@ -46,8 +46,8 @@ export async function refreshAccessToken(refreshToken: string) {
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`HubSpot token refresh failed (${res.status}): ${text}`);
+    await res.text(); // consume body
+    throw new Error(`HubSpot token refresh failed (${res.status})`);
   }
 
   return res.json() as Promise<{

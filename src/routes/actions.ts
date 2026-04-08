@@ -26,8 +26,8 @@ router.get("/businesses", async (req, res) => {
     const businesses = await client.listBusinesses();
     res.json(businesses);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: message });
+    console.error("Error listing businesses:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -54,8 +54,8 @@ router.get("/agents", async (req, res) => {
     const agents = await client.listAgents(businessId);
     res.json(agents);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: message });
+    console.error("Error listing agents:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -80,8 +80,8 @@ router.get("/usage", async (req, res) => {
     const usage = await client.getUsageSummary();
     res.json(usage);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    res.status(500).json({ error: message });
+    console.error("Error fetching usage:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -1,8 +1,62 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
+import crypto from "crypto";
 import { getTokens } from "../services/token-store";
 import { hubspotRequest } from "../services/hubspot-client";
 
 const router = Router();
+
+// --- Helpers ---
+
+export function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+export function verifyHubSpotSignature(req: Request): boolean {
+  const signature = req.headers["x-hubspot-signature"] as string | undefined;
+  const secret = process.env.HUBSPOT_CLIENT_SECRET;
+  if (!signature || !secret) return false;
+
+  const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+  if (!rawBody) return false;
+
+  const expected = crypto
+    .createHash("sha256")
+    .update(secret + rawBody.toString("utf8"))
+    .digest("hex");
+
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
+
+export function verifyDavoxiSignature(req: Request): boolean {
+  const signature = req.headers["x-davoxi-signature"] as string | undefined;
+  const secret = process.env.DAVOXI_WEBHOOK_SECRET;
+  if (!signature || !secret) return false;
+
+  const rawBody = (req as Request & { rawBody?: Buffer }).rawBody;
+  if (!rawBody) return false;
+
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch {
+    return false;
+  }
+}
+
+// ---
 
 interface HubSpotWebhookEvent {
   eventId: number;
@@ -23,7 +77,12 @@ interface HubSpotWebhookEvent {
  *   - deal.creation: New deal created
  *   - contact.propertyChange: Contact property updated
  */
-router.post("/hubspot", async (req, res) => {
+router.post("/hubspot", async (req: Request, res: Response) => {
+  if (!verifyHubSpotSignature(req)) {
+    res.status(401).json({ error: "Invalid signature" });
+    return;
+  }
+
   const events = req.body as HubSpotWebhookEvent[];
 
   // Acknowledge immediately
@@ -37,13 +96,12 @@ router.post("/hubspot", async (req, res) => {
     try {
       switch (event.subscriptionType) {
         case "contact.creation": {
-          const contact = await hubspotRequest<{
+          await hubspotRequest<{
             properties: { firstname?: string; lastname?: string; phone?: string; email?: string };
           }>(portalId, "GET", `/crm/v3/objects/contacts/${event.objectId}`);
 
-          console.log(
-            `New HubSpot contact: ${contact.properties.firstname} ${contact.properties.lastname} (${contact.properties.phone})`,
-          );
+          // Log only the object ID, not name/phone (PII)
+          console.log(`New HubSpot contact created: objectId=${event.objectId}`);
           break;
         }
 
@@ -71,7 +129,12 @@ router.post("/hubspot", async (req, res) => {
  * Events:
  *   - call.completed: Log call to HubSpot contact timeline via Engagements API
  */
-router.post("/davoxi", async (req, res) => {
+router.post("/davoxi", async (req: Request, res: Response) => {
+  if (!verifyDavoxiSignature(req)) {
+    res.status(401).json({ error: "Invalid signature" });
+    return;
+  }
+
   const payload = req.body as {
     event: string;
     portalId?: string;
@@ -144,10 +207,18 @@ router.post("/davoxi", async (req, res) => {
           break;
         }
 
+        // HTML-encode user-supplied content before embedding in HTML
+        const safeSummary = escapeHtml(payload.summary || "No summary available");
+        const rawRecordingUrl = payload.recordingUrl ?? "";
+        const safeRecordingUrl = rawRecordingUrl.startsWith("https://") ? rawRecordingUrl : "";
+        const recordingLink = safeRecordingUrl
+          ? `<p><a href="${safeRecordingUrl}">Listen to recording</a></p>`
+          : "";
+
         // Create a note engagement with call summary
         await hubspotRequest(portalId, "POST", "/crm/v3/objects/notes", {
           properties: {
-            hs_note_body: `<h3>Davoxi AI Call Summary</h3><p><strong>Duration:</strong> ${payload.duration}s</p><p>${payload.summary || "No summary available"}</p>${payload.recordingUrl ? `<p><a href="${payload.recordingUrl}">Listen to recording</a></p>` : ""}`,
+            hs_note_body: `<h3>Davoxi AI Call Summary</h3><p><strong>Duration:</strong> ${payload.duration}s</p><p>${safeSummary}</p>${recordingLink}`,
             hs_timestamp: new Date().toISOString(),
           },
           associations: [
