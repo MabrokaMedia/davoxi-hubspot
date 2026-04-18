@@ -106,6 +106,22 @@ describe("apiKeyAuth middleware", () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it("rejects a key that is a prefix of the correct key (length mismatch)", async () => {
+    const app = makeApp("secret-key");
+    const res = await request(app, "GET", "/protected", {
+      headers: { "x-api-key": "secret-ke" }, // one char short
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a key that extends the correct key (length mismatch)", async () => {
+    const app = makeApp("secret-key");
+    const res = await request(app, "GET", "/protected", {
+      headers: { "x-api-key": "secret-keyX" }, // one char extra
+    });
+    expect(res.status).toBe(401);
+  });
 });
 
 // ---------------------------------------------------------------------------

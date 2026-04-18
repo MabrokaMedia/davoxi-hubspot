@@ -106,11 +106,12 @@ router.post("/hubspot", async (req: Request, res: Response) => {
         }
 
         case "deal.creation": {
-          const deal = await hubspotRequest<{
+          await hubspotRequest<{
             properties: { dealname?: string; amount?: string; dealstage?: string };
           }>(portalId, "GET", `/crm/v3/objects/deals/${event.objectId}`);
 
-          console.log(`New HubSpot deal: ${deal.properties.dealname} ($${deal.properties.amount})`);
+          // Log only the object ID — deal name and amount may contain PII / sensitive financial data
+          console.log(`New HubSpot deal created: objectId=${event.objectId}`);
           break;
         }
 

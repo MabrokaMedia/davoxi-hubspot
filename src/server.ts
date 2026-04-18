@@ -21,8 +21,10 @@ app.use(
 );
 
 // Parse JSON and capture raw body for webhook signature verification
+// 16kb cap prevents oversized-body DoS (matches davoxi-aws-marketplace)
 app.use(
   express.json({
+    limit: "16kb",
     verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
       req.rawBody = buf;
     },
