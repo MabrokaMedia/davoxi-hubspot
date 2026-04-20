@@ -14,6 +14,17 @@ const pendingStates = new Map<string, StateEntry>();
 
 const STATE_TTL_MS = 5 * 60 * 1000;
 
+// Periodically purge expired state entries to prevent unbounded memory growth
+const _stateCleanup = setInterval(() => {
+  const now = Date.now();
+  for (const [state, entry] of pendingStates) {
+    if (now > entry.expiresAt) pendingStates.delete(state);
+  }
+}, STATE_TTL_MS);
+
+// Allow the process to exit cleanly without waiting for the interval
+if (typeof _stateCleanup.unref === "function") _stateCleanup.unref();
+
 export function generateState(): string {
   const state = crypto.randomBytes(16).toString("hex");
   pendingStates.set(state, { expiresAt: Date.now() + STATE_TTL_MS });
