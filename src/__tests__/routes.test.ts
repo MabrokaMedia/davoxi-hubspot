@@ -19,6 +19,7 @@ jest.mock("@davoxi/client", () => ({
 import * as hubspotClient from "../services/hubspot-client";
 import * as tokenStore from "../services/token-store";
 import { DavoxiClient } from "@davoxi/client";
+import * as oauthModule from "../routes/oauth";
 
 // We need a light HTTP test helper since supertest isn't installed
 async function request(app: Express, method: string, path: string, body?: unknown) {
@@ -104,7 +105,8 @@ describe("routes", () => {
       });
       jest.spyOn(hubspotClient, "getPortalId").mockResolvedValue("portal-1");
 
-      const res = await request(app, "GET", "/oauth/callback?code=test-code");
+      const state = oauthModule.generateState();
+      const res = await request(app, "GET", `/oauth/callback?code=test-code&state=${state}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({
@@ -120,7 +122,8 @@ describe("routes", () => {
         .spyOn(hubspotClient, "exchangeCodeForTokens")
         .mockRejectedValue(new Error("exchange failed"));
 
-      const res = await request(app, "GET", "/oauth/callback?code=bad-code");
+      const state = oauthModule.generateState();
+      const res = await request(app, "GET", `/oauth/callback?code=bad-code&state=${state}`);
 
       expect(res.status).toBe(500);
       expect(res.body).toMatchObject({
