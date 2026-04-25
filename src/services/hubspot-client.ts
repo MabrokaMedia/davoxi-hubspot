@@ -59,9 +59,12 @@ export async function refreshAccessToken(refreshToken: string) {
 
 /**
  * Get the portal ID for an access token.
+ * Uses the HubSpot token-info endpoint (GET /oauth/v1/access-tokens/{token}),
+ * which is separate from the token-exchange endpoint stored in config.hubspot.tokenUrl.
  */
 export async function getPortalId(accessToken: string): Promise<string> {
-  const res = await fetch(`${config.hubspot.tokenUrl}/${accessToken}`, {
+  const url = `${config.hubspot.apiDomain}/oauth/v1/access-tokens/${encodeURIComponent(accessToken)}`;
+  const res = await fetch(url, {
     method: "GET",
   });
 

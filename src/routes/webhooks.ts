@@ -211,9 +211,17 @@ router.post("/davoxi", async (req: Request, res: Response) => {
         // HTML-encode user-supplied content before embedding in HTML
         const safeSummary = escapeHtml(payload.summary || "No summary available");
         const rawRecordingUrl = payload.recordingUrl ?? "";
-        const safeRecordingUrl = rawRecordingUrl.startsWith("https://") ? rawRecordingUrl : "";
+        let safeRecordingUrl = "";
+        try {
+          const parsed = new URL(rawRecordingUrl);
+          if (parsed.protocol === "https:") {
+            safeRecordingUrl = parsed.href;
+          }
+        } catch {
+          // invalid URL — leave safeRecordingUrl as ""
+        }
         const recordingLink = safeRecordingUrl
-          ? `<p><a href="${safeRecordingUrl}">Listen to recording</a></p>`
+          ? `<p><a href="${escapeHtml(safeRecordingUrl)}">Listen to recording</a></p>`
           : "";
 
         // Create a note engagement with call summary
