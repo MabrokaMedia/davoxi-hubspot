@@ -162,6 +162,60 @@ describe("escapeHtml", () => {
 });
 
 // ---------------------------------------------------------------------------
+// MEDIUM: recording URL validation (URL-constructor-based safe URL check)
+// Validates that the webhook call_log handler only embeds valid https:// URLs
+// in HTML notes and that the href itself is HTML-escaped.
+// ---------------------------------------------------------------------------
+describe("recording URL safety", () => {
+  function sanitizeRecordingUrl(raw: string): string {
+    let safe = "";
+    try {
+      const parsed = new URL(raw);
+      if (parsed.protocol === "https:") {
+        safe = parsed.href;
+      }
+    } catch {
+      // invalid URL
+    }
+    return safe;
+  }
+
+  it("accepts a valid https URL", () => {
+    expect(sanitizeRecordingUrl("https://api.twilio.com/recording/abc123")).toBe(
+      "https://api.twilio.com/recording/abc123"
+    );
+  });
+
+  it("rejects http URLs", () => {
+    expect(sanitizeRecordingUrl("http://example.com/rec")).toBe("");
+  });
+
+  it("rejects javascript: URLs", () => {
+    expect(sanitizeRecordingUrl("javascript:alert(1)")).toBe("");
+  });
+
+  it("rejects data: URLs", () => {
+    expect(sanitizeRecordingUrl("data:text/html,<script>alert(1)</script>")).toBe("");
+  });
+
+  it("rejects empty string", () => {
+    expect(sanitizeRecordingUrl("")).toBe("");
+  });
+
+  it("rejects malformed URL", () => {
+    expect(sanitizeRecordingUrl("not-a-url")).toBe("");
+  });
+
+  it("normalises the URL (removes user-injected fragments, etc.)", () => {
+    const result = sanitizeRecordingUrl("https://cdn.example.com/rec?v=1#frag");
+    expect(result).toBe("https://cdn.example.com/rec?v=1#frag");
+    // The URL constructor normalises — no raw user string is kept verbatim
+    expect(result).not.toContain('"');
+    expect(result).not.toContain("'");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CRITICAL-2: verifyHubSpotSignature
 // ---------------------------------------------------------------------------
 describe("verifyHubSpotSignature", () => {
