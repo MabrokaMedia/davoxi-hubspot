@@ -90,15 +90,29 @@ describe("hubspot-client", () => {
   });
 
   describe("getPortalId", () => {
-    it("should GET the token info URL and return the hub_id as string", async () => {
+    it("should GET /oauth/v1/access-tokens/{token} (not the token-exchange URL)", async () => {
       mockFetch.mockResolvedValue(mockResponse({ hub_id: 12345 }));
 
       const result = await getPortalId("some-access-token");
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
-      const [url] = mockFetch.mock.calls[0];
+      const [url, options] = mockFetch.mock.calls[0];
+      // Must use the token-info endpoint, not the token-exchange endpoint
+      expect(url).toContain("/oauth/v1/access-tokens/");
+      expect(url).not.toContain("/oauth/v1/token/");
       expect(url).toContain("some-access-token");
+      expect(options.method).toBe("GET");
       expect(result).toBe("12345");
+    });
+
+    it("should percent-encode the access token in the URL", async () => {
+      mockFetch.mockResolvedValue(mockResponse({ hub_id: 99 }));
+
+      await getPortalId("token with spaces+special");
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(url).not.toContain(" ");
+      expect(url).toContain("token%20with%20spaces");
     });
 
     it("should throw when the request fails", async () => {
