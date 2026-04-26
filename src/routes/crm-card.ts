@@ -6,6 +6,8 @@ import { config } from "../config";
 
 const router = Router();
 
+const PORTAL_ID_RE = /^[a-zA-Z0-9_-]{4,64}$/;
+
 /**
  * GET /crm-card/contact — CRM card data for a HubSpot contact record.
  *
@@ -15,7 +17,7 @@ const router = Router();
 router.get("/contact", async (req, res) => {
   const portalId = req.query.portalId as string;
 
-  if (!portalId) {
+  if (!portalId || !PORTAL_ID_RE.test(portalId)) {
     res.json({ results: [] });
     return;
   }

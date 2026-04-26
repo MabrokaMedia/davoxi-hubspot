@@ -5,6 +5,9 @@ import { config } from "../config";
 
 const router = Router();
 
+const PORTAL_ID_RE = /^[a-zA-Z0-9_-]{4,64}$/;
+const BUSINESS_ID_RE = /^[a-zA-Z0-9_-]{4,64}$/;
+
 /**
  * GET /actions/businesses — List Davoxi businesses for a HubSpot portal.
  */
@@ -12,6 +15,10 @@ router.get("/businesses", async (req, res) => {
   const portalId = req.query.portalId as string;
   if (!portalId) {
     res.status(400).json({ error: "portalId is required" });
+    return;
+  }
+  if (!PORTAL_ID_RE.test(portalId)) {
+    res.status(400).json({ error: "Invalid portalId format" });
     return;
   }
 
@@ -42,6 +49,14 @@ router.get("/agents", async (req, res) => {
     res.status(400).json({ error: "portalId and businessId are required" });
     return;
   }
+  if (!PORTAL_ID_RE.test(portalId)) {
+    res.status(400).json({ error: "Invalid portalId format" });
+    return;
+  }
+  if (!BUSINESS_ID_RE.test(businessId)) {
+    res.status(400).json({ error: "Invalid businessId format" });
+    return;
+  }
 
   const record = getTokens(portalId);
   if (!record?.davoxiApiKey) {
@@ -66,6 +81,10 @@ router.get("/usage", async (req, res) => {
   const portalId = req.query.portalId as string;
   if (!portalId) {
     res.status(400).json({ error: "portalId is required" });
+    return;
+  }
+  if (!PORTAL_ID_RE.test(portalId)) {
+    res.status(400).json({ error: "Invalid portalId format" });
     return;
   }
 
