@@ -16,6 +16,21 @@ export function escapeHtml(text: string): string {
     .replace(/'/g, "&#039;");
 }
 
+const HEX_RE = /^[0-9a-fA-F]+$/;
+
+function timingSafeHexEqual(actual: string, expected: string): boolean {
+  if (!HEX_RE.test(actual) || !HEX_RE.test(expected)) return false;
+  if (actual.length !== expected.length) return false;
+  try {
+    const a = Buffer.from(actual, "hex");
+    const b = Buffer.from(expected, "hex");
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 export function verifyHubSpotSignature(req: Request): boolean {
   const signature = req.headers["x-hubspot-signature"] as string | undefined;
   const secret = process.env.HUBSPOT_CLIENT_SECRET;
@@ -29,11 +44,7 @@ export function verifyHubSpotSignature(req: Request): boolean {
     .update(secret + rawBody.toString("utf8"))
     .digest("hex");
 
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  } catch {
-    return false;
-  }
+  return timingSafeHexEqual(signature, expected);
 }
 
 export function verifyDavoxiSignature(req: Request): boolean {
@@ -49,12 +60,10 @@ export function verifyDavoxiSignature(req: Request): boolean {
     .update(rawBody)
     .digest("hex");
 
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  } catch {
-    return false;
-  }
+  return timingSafeHexEqual(signature, expected);
 }
+
+const PORTAL_ID_RE = /^[a-zA-Z0-9_-]{4,64}$/;
 
 // ---
 
@@ -150,7 +159,10 @@ router.post("/davoxi", async (req: Request, res: Response) => {
   res.status(200).json({ received: true });
 
   const portalId = payload.portalId;
-  if (!portalId) return;
+  if (!portalId || !PORTAL_ID_RE.test(portalId)) {
+    console.warn("[davoxi webhook] missing or malformed portalId; dropping event");
+    return;
+  }
 
   const record = getTokens(portalId);
   if (!record) return;
