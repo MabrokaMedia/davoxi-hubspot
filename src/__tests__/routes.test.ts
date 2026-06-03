@@ -146,6 +146,31 @@ describe("routes", () => {
       expect(res.body).toMatchObject({ error: "portalId is required" });
     });
 
+    it("GET /actions/businesses with path-traversal portalId should return 400", async () => {
+      const res = await request(app, "GET", "/actions/businesses?portalId=../etc/passwd");
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: "Invalid portalId format" });
+    });
+
+    it("GET /actions/businesses with excessively long portalId should return 400", async () => {
+      const longId = "a".repeat(65);
+      const res = await request(app, "GET", `/actions/businesses?portalId=${longId}`);
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: "Invalid portalId format" });
+    });
+
+    it("GET /actions/agents with invalid businessId format should return 400", async () => {
+      const res = await request(app, "GET", "/actions/agents?portalId=portal-1&businessId=../../etc");
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: "Invalid businessId format" });
+    });
+
+    it("GET /actions/usage with path-traversal portalId should return 400", async () => {
+      const res = await request(app, "GET", "/actions/usage?portalId=../../../etc");
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: "Invalid portalId format" });
+    });
+
     it("GET /actions/businesses without API key should return 404", async () => {
       tokenStore.saveTokens({
         portalId: "portal-1",
@@ -220,6 +245,15 @@ describe("routes", () => {
       const res = await request(app, "POST", "/settings/api-key", { portalId: "portal-1" });
       expect(res.status).toBe(400);
       expect(res.body).toMatchObject({ error: "portalId and apiKey are required" });
+    });
+
+    it("POST /settings/api-key with invalid portalId format should return 400", async () => {
+      const res = await request(app, "POST", "/settings/api-key", {
+        portalId: "../etc/passwd",
+        apiKey: "some-key",
+      });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ error: "Invalid portalId format" });
     });
 
     it("POST /settings/api-key for unconnected portal should return 404", async () => {

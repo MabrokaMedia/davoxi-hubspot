@@ -5,6 +5,8 @@ import { config } from "../config";
 
 const router = Router();
 
+const PORTAL_ID_RE = /^[a-zA-Z0-9_-]{4,64}$/;
+
 /**
  * POST /settings/api-key — Save the user's Davoxi API key for a portal.
  */
@@ -13,6 +15,10 @@ router.post("/api-key", async (req, res) => {
 
   if (!portalId || !apiKey) {
     res.status(400).json({ error: "portalId and apiKey are required" });
+    return;
+  }
+  if (!PORTAL_ID_RE.test(portalId)) {
+    res.status(400).json({ error: "Invalid portalId format" });
     return;
   }
 

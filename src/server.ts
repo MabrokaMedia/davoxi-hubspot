@@ -1,6 +1,7 @@
 import express, { Request } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { config } from "./config";
 import { apiKeyAuth } from "./middleware/apiKeyAuth";
 import oauthRoutes from "./routes/oauth";
@@ -36,17 +37,43 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "davoxi-hubspot" });
 });
 
+const oauthLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests" },
+});
+
+const webhookLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests" },
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests" },
+});
+
 // OAuth routes are public (required for HubSpot OAuth flow)
-app.use("/oauth", oauthRoutes);
+app.use("/oauth", oauthLimiter, oauthRoutes);
 
 // All other routes require a valid internal API key
-app.use("/settings", apiKeyAuth, settingsRoutes);
-app.use("/webhooks", apiKeyAuth, webhookRoutes);
-app.use("/crm-card", apiKeyAuth, crmCardRoutes);
-app.use("/actions", apiKeyAuth, actionRoutes);
+app.use("/settings", apiLimiter, apiKeyAuth, settingsRoutes);
+app.use("/webhooks", webhookLimiter, apiKeyAuth, webhookRoutes);
+app.use("/crm-card", apiLimiter, apiKeyAuth, crmCardRoutes);
+app.use("/actions", apiLimiter, apiKeyAuth, actionRoutes);
 
-app.listen(config.port, () => {
-  console.log(`Davoxi HubSpot integration running on port ${config.port}`);
-});
+if (require.main === module) {
+  app.listen(config.port, () => {
+    console.log(`Davoxi HubSpot integration running on port ${config.port}`);
+  });
+}
 
 export default app;
